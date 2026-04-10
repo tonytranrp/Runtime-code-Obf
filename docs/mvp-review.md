@@ -88,3 +88,28 @@ The MVP review should fail if any of the following is true:
   called out as a caveat.
 - The implementation relies on unclear lifetime rules for decoded strings.
 - The docs describe the library as "secure" or "undetectable" without evidence.
+
+## Current implementation observations
+
+The current MVP snapshot already aligns with several review goals:
+
+- The public entry point is small: `RUNTIME_OBF(...)`, `decrypt_array()`,
+  `decrypt()`, `copy_to(...)`, and `encrypted_bytes()`.
+- The core constructor is `consteval`, which keeps the encode step in constant
+  evaluation for string literals.
+- The implementation stores encrypted bytes in a `std::array<std::uint8_t, N>`
+  and reconstructs plaintext only on demand.
+- Tests and a repo-local binary scan script already exist, which is a good sign
+  for long-term maintainability.
+
+The current docs and review pass should keep these caveats front-and-center:
+
+- The MVP currently targets narrow `const char[N]` literals only.
+- `decrypt()` returns `std::string`, so it allocates and materializes plaintext
+  on the heap. Callers who need tighter lifetime control should prefer
+  `decrypt_array()` or `copy_to(...)`.
+- The per-call-site seed uses `__LINE__` plus `__COUNTER__`, which is practical
+  for modern compilers but still ties the macro to a compiler extension.
+- The example program intentionally prints decrypted secrets; that is useful for
+  demonstration, but it also means the runtime output path is not trying to hide
+  plaintext after decode.

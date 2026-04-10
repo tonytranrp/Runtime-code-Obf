@@ -23,6 +23,7 @@ engineer, dynamic instrumentation, or memory inspection after decode.
 ```powershell
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
 ```
 
 If the project later adds presets, prefer the documented Release preset instead.
@@ -35,6 +36,9 @@ Use one of:
 - a focused test binary that exercises the obfuscation path.
 
 Prefer a tiny artifact because it is easier to inspect and reason about.
+In the current repo layout, `runtime_obf_basic_example` is the natural first
+artifact because the test suite already treats it as the binary-inspection
+target.
 
 ### 3. Search for known plaintext
 
@@ -69,6 +73,22 @@ or, if needed for a deeper inspection:
 dumpbin /rawdata <artifact>
 ```
 
+#### Repo-local verification script
+
+The repository already includes `scripts/check_plaintext.py`, which currently
+scans raw binary bytes for UTF-8 and UTF-16LE encodings of selected needles.
+For the current example target, the direct invocation shape is:
+
+```powershell
+python scripts/check_plaintext.py `
+  build/examples/Release/runtime_obf_basic_example.exe `
+  "hunter2" `
+  "compile-time secret" `
+  "api-key-123"
+```
+
+Adjust the artifact path to match the active generator and configuration.
+
 ## Suggested negative-control test cases
 
 When the implementation lands, include examples that intentionally protect:
@@ -89,6 +109,10 @@ Treat verification as **failed** if any of the following happens:
 - the result depends on a compiler-specific behavior that is undocumented, or
 - the artifact only "passes" because the searched literal was optimized out
   entirely rather than being safely represented.
+
+The current repo-local script is a strong MVP guardrail, but it is still a
+minimum bar: it does not replace compiler-matrix testing, symbol-file
+inspection, or memory-lifetime review after runtime decryption.
 
 ## Documentation policy
 
