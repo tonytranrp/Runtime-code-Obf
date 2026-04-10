@@ -37,6 +37,9 @@ if(RUNTIME_OBF_BUILD_TESTS)
   enable_testing()
 
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  set(runtime_obf_verification_needles_file
+      "${CMAKE_CURRENT_BINARY_DIR}/runtime_obf_verification_needles.txt")
+  file(WRITE "${runtime_obf_verification_needles_file}" "hunter2\ncompile-time secret\napi-key-123\n")
 
   add_executable(runtime_obf_tests tests/obfuscated_string_tests.cpp)
   target_link_libraries(runtime_obf_tests PRIVATE runtime_obf::runtime_obf)
@@ -54,6 +57,19 @@ if(RUNTIME_OBF_BUILD_TESTS)
         "hunter2"
         "compile-time secret"
         "api-key-123")
+
+    if(MSVC)
+      add_test(
+        NAME runtime_obf.dumpbin_scan
+        COMMAND
+          ${CMAKE_COMMAND}
+          -DARTIFACT=$<TARGET_FILE:runtime_obf_basic_example>
+          -DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}
+          -DPYTHON_EXECUTABLE=${Python3_EXECUTABLE}
+          -DCHECK_SCRIPT=${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_plaintext.py
+          -DNEEDLES_FILE=${runtime_obf_verification_needles_file}
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/run_dumpbin_scan.cmake)
+    endif()
   endif()
 endif()
 

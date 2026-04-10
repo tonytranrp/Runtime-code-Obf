@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace runtime_obf {
 
@@ -34,7 +35,58 @@ namespace detail {
   return static_cast<std::uint8_t>(mixed & 0xFFu);
 }
 
+inline void secure_clear(char* buffer, std::size_t size) noexcept {
+  volatile char* volatile_buffer = buffer;
+  for (std::size_t index = 0; index < size; ++index) {
+    volatile_buffer[index] = 0;
+  }
+}
+
 }  // namespace detail
+
+template <std::size_t N>
+class scoped_plaintext final {
+ public:
+  using storage_type = std::array<char, N>;
+
+  constexpr scoped_plaintext() noexcept = default;
+  constexpr explicit scoped_plaintext(storage_type storage) noexcept
+      : storage_(storage) {}
+
+  scoped_plaintext(const scoped_plaintext&) = delete;
+  auto operator=(const scoped_plaintext&) -> scoped_plaintext& = delete;
+
+  constexpr scoped_plaintext(scoped_plaintext&& other) noexcept
+      : storage_(other.storage_) {
+    other.wipe();
+  }
+
+  constexpr auto operator=(scoped_plaintext&& other) noexcept
+      -> scoped_plaintext& {
+    if (this != &other) {
+      wipe();
+      storage_ = other.storage_;
+      other.wipe();
+    }
+    return *this;
+  }
+
+  ~scoped_plaintext() { wipe(); }
+
+  [[nodiscard]] constexpr auto data() noexcept -> char* { return storage_.data(); }
+  [[nodiscard]] constexpr auto data() const noexcept -> const char* { return storage_.data(); }
+  [[nodiscard]] constexpr auto c_str() const noexcept -> const char* { return storage_.data(); }
+  [[nodiscard]] constexpr auto size() const noexcept -> std::size_t { return N - 1u; }
+  [[nodiscard]] constexpr auto empty() const noexcept -> bool { return size() == 0; }
+  [[nodiscard]] constexpr auto view() const noexcept -> std::string_view {
+    return std::string_view(storage_.data(), size());
+  }
+
+  constexpr void wipe() noexcept { detail::secure_clear(storage_.data(), N); }
+
+ private:
+  storage_type storage_{};
+};
 
 template <std::size_t N, std::uint64_t Seed>
 class obfuscated_string final {
@@ -48,7 +100,8 @@ class obfuscated_string final {
     }
   }
 
-  [[nodiscard]] constexpr auto decrypt_array() const noexcept -> decrypted_storage {
+  [[nodiscard]] constexpr auto decrypt_array() const noexcept
+      -> decrypted_storage {
     decrypted_storage result{};
     for (std::size_t index = 0; index < N; ++index) {
       result[index] = static_cast<char>(encrypted_[index] ^ detail::key_at(Seed, index));
@@ -61,6 +114,10 @@ class obfuscated_string final {
     return std::string(result.data(), N - 1u);
   }
 
+  [[nodiscard]] constexpr auto decrypt_scoped() const noexcept -> scoped_plaintext<N> {
+    return scoped_plaintext<N>(decrypt_array());
+  }
+
   template <std::size_t BufferSize>
   constexpr void copy_to(char (&buffer)[BufferSize]) const noexcept {
     static_assert(BufferSize >= N, "Destination buffer is too small.");
@@ -71,7 +128,8 @@ class obfuscated_string final {
   }
 
   template <std::size_t BufferSize>
-  constexpr void copy_to(std::array<char, BufferSize>& buffer) const noexcept {
+  constexpr void copy_to(
+      std::array<char, BufferSize>& buffer) const noexcept {
     static_assert(BufferSize >= N, "Destination buffer is too small.");
     const auto result = decrypt_array();
     for (std::size_t index = 0; index < N; ++index) {

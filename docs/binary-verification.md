@@ -11,10 +11,23 @@ For representative protected literals:
 
 - the plaintext does **not** appear in the final Release artifact as an obvious
   static string-table entry, and
+- the plaintext does **not** appear in generated disassembly or `dumpbin`
+  report text for the same Release artifact, and
 - the project documents any remaining caveats honestly.
 
 This workflow does **not** prove resistance against a determined reverse
 engineer, dynamic instrumentation, or memory inspection after decode.
+
+## Most realistic recovery paths to review first
+
+For this project, the first review pass should always focus on:
+
+1. **Assembly patterns** - the decode loop and helper call structure may be
+   recognizable even when the plaintext is hidden.
+2. **Static data signatures** - encrypted byte arrays still exist in the
+   binary, and a reverse engineer can often identify them by layout or usage.
+3. **Runtime plaintext lifetime** - once decoded, plaintext can linger in
+   heap/stack/caller-owned buffers longer than necessary.
 
 ## Recommended verification steps
 
@@ -76,8 +89,9 @@ dumpbin /rawdata <artifact>
 #### Repo-local verification script
 
 The repository already includes `scripts/check_plaintext.py`, which currently
-scans raw binary bytes for UTF-8 and UTF-16LE encodings of selected needles.
-For the current example target, the direct invocation shape is:
+scans raw binary bytes for UTF-8, UTF-16LE, and printable ASCII traces of
+selected needles. It can also scan generated disassembly or dumpbin report
+files. For the current example target, the direct invocation shape is:
 
 ```powershell
 python scripts/check_plaintext.py `
@@ -88,6 +102,20 @@ python scripts/check_plaintext.py `
 ```
 
 Adjust the artifact path to match the active generator and configuration.
+
+For an expanded MSVC verification lane:
+
+```powershell
+dumpbin /rawdata build\runtime_obf_basic_example.exe > build\runtime_obf_basic_example.raw.txt
+dumpbin /disasm build\runtime_obf_basic_example.exe > build\runtime_obf_basic_example.disasm.txt
+python scripts/check_plaintext.py `
+  build\runtime_obf_basic_example.exe `
+  --text-report build\runtime_obf_basic_example.raw.txt `
+  --text-report build\runtime_obf_basic_example.disasm.txt `
+  "hunter2" `
+  "compile-time secret" `
+  "api-key-123"
+```
 
 ## Suggested negative-control test cases
 
@@ -105,6 +133,8 @@ inspection toolchain itself is proven to work.
 Treat verification as **failed** if any of the following happens:
 
 - a supposedly protected literal is visible in the Release artifact,
+- a supposedly protected literal is visible in generated disassembly or rawdata
+  reports for the Release artifact,
 - the verification command cannot be reproduced from the repo docs,
 - the result depends on a compiler-specific behavior that is undocumented, or
 - the artifact only "passes" because the searched literal was optimized out

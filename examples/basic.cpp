@@ -8,16 +8,16 @@ int main() {
   constexpr auto secret = RUNTIME_OBF("compile-time secret");
   constexpr auto api_key = RUNTIME_OBF("api-key-123");
 
-  const auto password_text = password.decrypt();
-  const auto secret_text = secret.decrypt();
-  const auto api_key_text = api_key.decrypt();
+  const auto password_text = password.decrypt_scoped();
+  const auto secret_text = secret.decrypt_scoped();
+  const auto api_key_text = api_key.decrypt_scoped();
 
   std::array<char, decltype(password)::encoded_size()> buffer{};
   password.copy_to(buffer);
 
-  std::cout << "Password: " << password_text << '\n'
-            << "Secret: " << secret_text << '\n'
-            << "API key: " << api_key_text << '\n'
+  std::cout << "Password: " << password_text.view() << '\n'
+            << "Secret: " << secret_text.view() << '\n'
+            << "API key: " << api_key_text.view() << '\n'
             << "Buffer: " << buffer.data() << '\n';
 
   return 0;

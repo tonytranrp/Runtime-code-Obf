@@ -50,6 +50,14 @@ int main() {
   constexpr auto other = RUNTIME_OBF("hunter2");
   expect(other.decrypt() == "hunter2", "multiple obfuscated strings should decrypt independently");
 
+  auto scoped = other.decrypt_scoped();
+  expect(scoped.view() == "hunter2", "decrypt_scoped() should expose the plaintext without allocating");
+  scoped.wipe();
+  for (char value : scoped.view()) {
+    expect(value == '\0', "wipe() should clear scoped plaintext storage");
+  }
+  expect(scoped.c_str()[0] == '\0', "wipe() should preserve null termination");
+
   std::cout << "runtime_obf tests passed\n";
   return 0;
 }
