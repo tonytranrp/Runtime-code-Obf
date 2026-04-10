@@ -4,3 +4,4 @@ out/
 .vs/
 .idea/
 CMakeUserPresets.json
+__pycache__/
