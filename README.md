@@ -35,6 +35,24 @@ The test suite contains:
 1. **Unit tests** for compile-time construction and run-time decryption
 2. **Plaintext scan** that reads the built example executable and fails if `hunter2`, `compile-time secret`, or `api-key-123` still appear in the binary
 
+## CMake consumption
+
+The library is header-only, so CPM/FetchContent users can consume it directly as
+an `INTERFACE` target without pulling in third-party dependencies:
+
+```cmake
+CPMAddPackage("gh:tonytranrp/Runtime-code-Obf#main")
+target_link_libraries(your_target PRIVATE runtime_obf::runtime_obf)
+```
+
+Install-based consumers can also use the exported package target after
+`cmake --install`:
+
+```cmake
+find_package(runtime_obf CONFIG REQUIRED)
+target_link_libraries(your_target PRIVATE runtime_obf::runtime_obf)
+```
+
 ## Caveats
 
 - This is **obfuscation**, not cryptography. It raises the bar for static string scraping but does not protect secrets once your program decrypts them in memory.
