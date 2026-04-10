@@ -23,9 +23,9 @@ def main() -> int:
     binary = args.binary.read_bytes()
     failures: list[str] = []
     for needle in args.needles:
-      matches = contains_plaintext(binary, needle)
-      if matches:
-          failures.append(f"{needle!r} found as {', '.join(matches)}")
+        matches = contains_plaintext(binary, needle)
+        if matches:
+            failures.append(f"{needle!r} found as {', '.join(matches)}")
 
     if failures:
         print(f"FAIL: plaintext leakage detected in {args.binary}")

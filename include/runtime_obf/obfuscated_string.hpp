@@ -70,12 +70,21 @@ class obfuscated_string final {
     }
   }
 
+  template <std::size_t BufferSize>
+  constexpr void copy_to(std::array<char, BufferSize>& buffer) const noexcept {
+    static_assert(BufferSize >= N, "Destination buffer is too small.");
+    const auto result = decrypt_array();
+    for (std::size_t index = 0; index < N; ++index) {
+      buffer[index] = result[index];
+    }
+  }
+
   [[nodiscard]] constexpr auto encrypted_bytes() const noexcept -> const encrypted_storage& {
     return encrypted_;
   }
 
-  [[nodiscard]] static consteval auto encoded_size() noexcept -> std::size_t { return N; }
-  [[nodiscard]] static consteval auto string_size() noexcept -> std::size_t { return N - 1u; }
+  [[nodiscard]] static constexpr auto encoded_size() noexcept -> std::size_t { return N; }
+  [[nodiscard]] static constexpr auto string_size() noexcept -> std::size_t { return N - 1u; }
 
  private:
   encrypted_storage encrypted_{};

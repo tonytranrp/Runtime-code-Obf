@@ -13,7 +13,7 @@ int main() {
   const auto api_key_text = api_key.decrypt();
 
   std::array<char, decltype(password)::encoded_size()> buffer{};
-  password.copy_to(buffer.data());
+  password.copy_to(buffer);
 
   std::cout << "Password: " << password_text << '\n'
             << "Secret: " << secret_text << '\n'
