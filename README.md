@@ -23,10 +23,12 @@ The `RUNTIME_OBF("...")` macro bakes encrypted bytes into the binary and reconst
 ## Build and test
 
 ```powershell
-cmake -S . -B build -G "Visual Studio 18 2026" -A x64
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
+
+On Windows, run those commands from a Visual Studio Developer Command Prompt (or after calling `VsDevCmd.bat`) so `cl.exe`, `link.exe`, and `ninja` are available.
 
 The test suite contains:
 
